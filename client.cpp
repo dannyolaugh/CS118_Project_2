@@ -1,17 +1,33 @@
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <stdio.h>
+#include <errno.h>
+#include <unistd.h>
+
 #include <string>
-#include <thread>
 #include <iostream>
+#include <sstream>
+#include <fstream>
+
+#include "helper.h"
 
 int main(int argc, char** argv)
 {
-  struct sockaddr_in myaddr;      /* our address */
-  struct sockaddr_in remaddr;     /* remote address */
-  socklen_t addrlen = sizeof(remaddr);            /* length of addresses */
-  int recvlen;                    /* # bytes received */
-  int fd;                         /* our socket */
-  unsigned char buf[BUFSIZE];     /* receive buffer */
+  if(argc != 2)
+    {
+      cerr << "ERROR: Invalid number of arguments";
+    }
 
-  /* create a UDP socket */
+  string urlOrIP = argv[1];
+  string portNum = argv[2]; 
+  string ip;
+  if(!isIP(urlOrIP))
+    ip = urlOrIP;
+  else
+    ip = getIP(urlOrIP, portNum);
   
   int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockfd < 0) {
@@ -20,16 +36,20 @@ int main(int argc, char** argv)
   }
 
   /* bind the socket to any valid IP address and a specific port */
+  struct sockaddr_in serverAddr;
+  serverAddr.sin_family = AF_INET;
+  serverAddr.sin_port = htons(atoi(portNum.c_str()));     // short, network byte order
+  serverAddr.sin_addr.s_addr = inet_addr(ip.c_str());
+  memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
 
-  memset((char *)&myaddr, 0, sizeof(myaddr));
-  myaddr.sin_family = AF_INET;
-  myaddr.sin_addr.s_addr = htons(INADDR_ANY);
-  myaddr.sin_port = htons(PORT);
-
-  if (bind(fd, (struct sockaddr *)&myaddr, sizeof(myaddr)) < 0) {
-    perror("bind failed");
-    return 0;
+  struct sockaddr_in clientAddr;
+  socklen_t clientAddrLen = sizeof(clientAddr);
+  if (getsockname(sockfd, (struct sockaddr *)&clientAddr, &clientAddrLen) == -1) {
+    perror("getsockname");
+    return 3;
   }
+
+
 
   /* now loop, receiving data and printing what we received */
   for (;;) {
@@ -41,7 +61,4 @@ int main(int argc, char** argv)
       printf("received message: \"%s\"\n", buf);
     }
   }
-
-    std::cerr << "web client is not implemented yet" << std::endl;
-    // do your stuff here! or not if you don't want to.
 }
