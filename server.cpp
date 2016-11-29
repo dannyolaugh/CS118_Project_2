@@ -18,6 +18,12 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
+  struct sockaddr_in addr;
+  struct sockaddr_in remaddr;
+  socklen_t addrlen = sizeof(remaddr);
+  int recvlen;
+  char buffer[1032];
+
   if(argc != 2)
     {
       cerr << "ERROR: Invalid number of arguments";
@@ -40,15 +46,33 @@ int main(int argc, char* argv[])
   }
   
   // bind address to socket
-  struct sockaddr_in addr;
   addr.sin_family = AF_INET;
-  addr.sin_port = htons(atoi(port_number.c_str()));     // short, network byte order
-  addr.sin_addr.s_addr = inet_addr(getIP(host_name, port_number).c_str());
+  addr.sin_port = htons(atoi(port_num.c_str()));     // short, network byte order
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
   memset(addr.sin_zero, '\0', sizeof(addr.sin_zero));
 
   if (::bind(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
     perror("bind");
     return 2;
   }
+
+  for (;;)
+    {
+      recvlen = recvfrom(sockfd, buffer, 1032, 0, 
+			 (struct sockaddr *)&remaddr, &addrlen);
+      if (recvlen > 0)
+        {       
+
+	}
+      else if (recvlen == 0)
+	{
+
+        }
+      else
+	{
+          fprintf(stderr, "recvfrom() failed");
+          exit(1);
+        }
+    }
 
 }

@@ -11,7 +11,7 @@ string getIP(string hostname, string portNum);
 class TCPmessage
 {
  public:
-  TCPmessage(int sNum, int aNum, int c, int aFlag, int sFlag, int fFlag);
+  TCPmessage(int sNum, int aNum, int c, int aFlag, int sFlag, int fFlag)
   int getSequence();
   int getackNum();
   int getcwnd();
@@ -21,7 +21,7 @@ class TCPmessage
   void setPayload(string p);
 
   char* encode();
-  void decode(char* m);
+  void decode(TCPmessage decodedMessage, char* message);
 
  private:
   int sequenceNum;

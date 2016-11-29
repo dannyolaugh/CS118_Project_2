@@ -55,19 +55,39 @@ char* TCPmessage::encode()
   memcpy(e+2, &ackNum, 2);
   memcpy(e+4, &cwnd, 2);
 
-  char* tmp[2];
-  tmp[0] = '0';
   int flags = 1*F + 2*S + 4*A;
-  tmp[1] = flags + '0';
-  memcpy(e+6, tmp, 2);
+  memcpy(e+6, flags, 2);
   
   memcpy(e+8, payload.c_str(), payload.length());  
   
 }
 
-void TCPmessage::decode(char* m)
+void TCPmessage::decode(TCPmessage decodedMessage, char* message)
 {
-  TCPmessage 
+  memcpy(decodedMessage.sequenceNum, message, 2);
+  memcpy(decodedMessage.ackNum, message+2, 2);
+  memcpy(decodedMessage.cwnd, message+4, 2);
+ 
+  decodedMessage.F = 0;
+  decodedMessage.S = 0;
+  decodedMessage.A = 0;
+
+  int tmp = 0;
+  memcpy(tmp, message+6, 2);
+  if(tmp%2 == 1)
+    {
+      decodedMessage.F = 1;
+    }
+  if(tmp%4 > 1) 
+    {
+      decodedMessage.S = 1;
+    }
+  if(tmp > 3)
+    {
+      decodedMessage.A = 1;
+    }
+
+  memcpy(decodedMessage.payload, message+8, message.length()-8);
 }
 
 bool isIP(string x)
