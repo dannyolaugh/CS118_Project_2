@@ -49,8 +49,8 @@ int main(int argc, char** argv)
 
   // bind address to socket                                                         
   addr.sin_family = AF_INET;
-  myaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  myaddr.sin_port = htons(80);
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  addr.sin_port = htons(80);
   memset(addr.sin_zero, '\0', sizeof(addr.sin_zero));
 
   if (::bind(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
@@ -60,8 +60,8 @@ int main(int argc, char** argv)
 
   memset((char *) &remaddr, 0, sizeof(remaddr));
   remaddr.sin_family = AF_INET;
-  remaddr.sin_port = htons(portNum.c_str());
-  if (inet_aton(ip, &remaddr.sin_addr)==0) {
+  remaddr.sin_port = htons(atoi(portNum.c_str()));
+  if (inet_aton(ip.c_str(), &remaddr.sin_addr)==0) {
     fprintf(stderr, "inet_aton() failed\n");
     exit(1);
   }

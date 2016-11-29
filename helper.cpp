@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <string>
 #include <iostream>
+#include <cstring>
 
 #include "helper.h"
 
@@ -50,52 +51,55 @@ void TCPmessage::setPayload(string p)
 char* TCPmessage::encode()
 {
   char* e = new char[1032];
+  
+  //  const int s = sequenceNum;
 
   memcpy(e, &sequenceNum, 2);
   memcpy(e+2, &ackNum, 2);
   memcpy(e+4, &cwnd, 2);
 
   int flags = 1*F + 2*S + 4*A;
-  memcpy(e+6, flags, 2);
+  memcpy(e+6, &flags, 2);
   
   memcpy(e+8, payload.c_str(), payload.length());  
-  
+  return e;
 }
 
-void TCPmessage::decode(TCPmessage decodedMessage, char* message)
+void TCPmessage::decode(char* message)
 {
-  memcpy(decodedMessage.sequenceNum, message, 2);
-  memcpy(decodedMessage.ackNum, message+2, 2);
-  memcpy(decodedMessage.cwnd, message+4, 2);
+  memcpy(&sequenceNum, message, 2);
+  memcpy(&ackNum, message+2, 2);
+  memcpy(&cwnd, message+4, 2);
  
-  decodedMessage.F = 0;
-  decodedMessage.S = 0;
-  decodedMessage.A = 0;
+  F = 0;
+  S = 0;
+  A = 0;
 
   int tmp = 0;
-  memcpy(tmp, message+6, 2);
+  memcpy(&tmp, message+6, 2);
   if(tmp%2 == 1)
     {
-      decodedMessage.F = 1;
+      F = 1;
     }
   if(tmp%4 > 1) 
     {
-      decodedMessage.S = 1;
+      S = 1;
     }
   if(tmp > 3)
     {
-      decodedMessage.A = 1;
+      A = 1;
     }
 
-  memcpy(decodedMessage.payload, message+8, message.length()-8);
+  memcpy(&payload, message+8, strlen(message)-8);
 }
+
 
 bool isIP(string x)
 {
   for(int i = 0; i < x.length(); i ++)
     {
-      if(x[i] != "." || !isdigit(x[i]))
-	return false
+      if(x[i] !=  '.' || !isdigit(x[i]))
+	return false;
     }
   return true;
 }
@@ -131,4 +135,5 @@ string getIP(string hostname, string portNum)
   freeaddrinfo(res); // free the linked list     
   return ip;
 }
+
 
