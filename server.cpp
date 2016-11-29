@@ -91,12 +91,34 @@ int main(int argc, char* argv[])
 		}
               if(recPacket.getA() == 1)
 		{
-		  
+		  cout << "server closed" << endl;
                 }
               else
                 {
+		  TCPmessage FIN(recPacket.getackNum(), recPacket.getSequence() + 1,
+				 recPacket.getcwnd(),0,0,1);
 		  
-                }
+		  if (sendto(sockfd, FIN.encode(),
+			     8, 0, (struct sockaddr *)&remaddr,
+			     addrlength) == -1)
+		    {
+		      perror("sendto error");
+		      return 3;
+		    }
+		  
+		  
+		  TCPmessage FIN_ACK(recPacket.getackNum(), 
+				     recPacket.getSequence() + 1,
+				     recPacket.getcwnd(),1,0,1);
+		  
+		  if (sendto(sockfd, FIN_ACK.encode(),
+			     8, 0, (struct sockaddr *)&remaddr,
+			     addrlength) == -1)
+		    {
+		      perror("sendto error");
+		      return 3;
+		    }
+		}
             }
 	  else if(recPacket.getA() == 1)
 	    {
@@ -105,8 +127,8 @@ int main(int argc, char* argv[])
 		  if(file.size() > 1024)
 		    {
 		      TCPmessage initial_packet(recPacket.getackNum(),
-						recPacket.getSequence() + 1024,
-						recPacket.getcwnd(), 1, 1, 0);
+						recPacket.getSequence() + 1,
+						recPacket.getcwnd(), 0, 0, 0);
 		      
 		      initial_packet.setPayload(file.substr(0,1024));
 		      
@@ -121,8 +143,8 @@ int main(int argc, char* argv[])
 		  else
 		    {
 		      TCPmessage initial_packet(recPacket.getackNum(),
-				       recPacket.getSequence() + file.size(),
-				       recPacket.getcwnd(), 1, 1, 0);
+				       recPacket.getSequence() + 1,
+				       recPacket.getcwnd(), 0, 0, 0);
 		      
 		      initial_packet.setPayload(file.substr(0,file.size()));
 
@@ -141,8 +163,8 @@ int main(int argc, char* argv[])
 		  if(file.size() > 1024 + recPacket.getackNum())
                     {
 		      TCPmessage packet(recPacket.getackNum(),
-				       1024 + recPacket.getackNum(),
-				       recPacket.getcwnd(), 1, 0, 0);
+				       1 + recPacket.getackNum(),
+				       recPacket.getcwnd(), 0, 0, 0);
 		      
                       packet.setPayload(file.substr(recPacket.getackNum(),1024));
 
@@ -157,8 +179,8 @@ int main(int argc, char* argv[])
                   else
                     {
 		      TCPmessage packet(recPacket.getackNum(),
-				       file.size() - recPacket.getackNum(),
-				       recPacket.getcwnd(), 1, 0, 0);
+				       1 + recPacket.getackNum(),
+				       recPacket.getcwnd(), 0, 0, 0);
 
 		      packet.setPayload(file.substr(recPacket.getackNum(),
 							    file.size() -
@@ -178,7 +200,8 @@ int main(int argc, char* argv[])
             }
 	  else if(recPacket.getS() == 1)
 	    {
-	      TCPmessage SYN_ACK(recPacket.getackNum(),0,recPacket.getcwnd(), 1, 1, 0);
+	      TCPmessage SYN_ACK(recPacket.getackNum(), recPacket.getSequence() + 1,
+				 recPacket.getcwnd(), 1, 1, 0);
 	      
 	      if (sendto(sockfd, SYN_ACK.encode(), 8, 0, 
 			 (struct sockaddr *)&remaddr, addrlength) == -1)
@@ -203,4 +226,5 @@ int main(int argc, char* argv[])
           exit(1);
         }
     }
+  close(sockfd);
 }

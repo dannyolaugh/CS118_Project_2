@@ -43,6 +43,9 @@ int TCPmessage::getS()
 int TCPmessage::getF()
 {return F;}
 
+string TCPmessage::getPayload()
+{return payload;}
+
 void TCPmessage::setPayload(string p)
 {
   payload = p;

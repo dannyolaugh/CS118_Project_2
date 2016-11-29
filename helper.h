@@ -18,6 +18,7 @@ class TCPmessage
   int getS();
   int getF();
   int getA();
+  string getPayload();
   void setPayload(string p);
 
   char* encode();

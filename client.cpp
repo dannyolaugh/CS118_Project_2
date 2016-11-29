@@ -18,7 +18,7 @@ int main(int argc, char** argv)
 {
   struct sockaddr_in addr;
   struct sockaddr_in remaddr;
-  socklen_t addrlen = sizeof(remaddr);
+  socklen_t addrlength = sizeof(remaddr);
   int recvlen;
   char buffer[1032]; 
 
@@ -66,18 +66,91 @@ int main(int argc, char** argv)
     exit(1);
   }
 
+  TCPmessage SYN(0, 0, 1024, 0, 1, 0);
+
+  if (sendto(sockfd, SYN.encode(), 8, 0,
+	     (struct sockaddr *)&remaddr, addrlength) == -1)
+    {
+      perror("sendto error");
+      return 3;
+    }
+
+  string file = ""; 
+
   /* now loop, receiving data and printing what we received */
   for (;;)
     {
       recvlen = recvfrom(sockfd, buffer, 1032, 0, 
-			 (struct sockaddr *)&remaddr, &addrlen);
+			 (struct sockaddr *)&remaddr, &addrlength);
+      
+      TCPmessage recPacket(0,0,0,0,0,0);
+      recPacket.decode(buffer);
+
       if (recvlen > 0) 
 	{
-	  
+	  if(recPacket.getA() == 1)
+	    {
+	      if(recPacket.getS() == 1)
+		{
+		  TCPmessage SYN_ACK(recPacket.getackNum(), 
+				     recPacket.getSequence() + 1, 
+				     recPacket.getcwnd(), 1, 1, 0);
+		  
+		  if (sendto(sockfd, SYN_ACK.encode(), 8, 0,
+			     (struct sockaddr *)&remaddr, addrlength) == -1)
+		    {
+		      perror("sendto error");
+		      return 3;
+		    }
+		}
+	      else if(recPacket.getF() == 1)
+		{
+		  TCPmessage FIN_ACK(recPacket.getackNum(),
+				     recPacket.getSequence() + 1,
+                                     recPacket.getcwnd(),1,0,1);
+		  
+		  if (sendto(sockfd, FIN_ACK.encode(),8, 0,
+			     (struct sockaddr *)&remaddr, addrlength) == -1)
+		    {
+		      perror("sendto error");
+		      return 3;
+		    }
+		  break;
+		}
+	      else
+		{
+		  cout << "server Ack'd == no bueno" << endl;
+		  return 11;
+		}
+	    }
+	  else if(recPacket.getA() == 0 && 
+		  recPacket.getF() == 0 && 
+		  recPacket.getS() == 0)
+	    {
+	      file += recPacket.getPayload();
+
+	      TCPmessage ACK(recPacket.getackNum(),
+			     recPacket.getSequence() +
+			     recPacket.getPayload().size(),
+			     recPacket.getcwnd(),1,0,0);
+
+	      if (sendto(sockfd, ACK.encode(),
+			 1032, 0, (struct sockaddr *)&remaddr,
+			 addrlength) == -1)
+		{
+		  perror("sendto error");
+		  return 3;
+		}
+	    }
+	  else
+	    {
+	      cout << "wrong flags" << endl;
+	      return 12;
+	    }
 	}
       else if (recvlen == 0)
 	{
-
+	  cout <<  "connection closed";
 	}
       else
 	{
@@ -85,4 +158,12 @@ int main(int argc, char** argv)
 	  exit(1);
 	}
     }
+  
+  ofstream outf;
+  outf.open("requested_data.txt");
+  if (outf.is_open()) {
+    outf << file;
+  }
+  outf.close();
+  close(sockfd);
 }
