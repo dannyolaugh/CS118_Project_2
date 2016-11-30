@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
   int recvlen;
   char buffer[1032];
 
-  if(argc != 2)
+  if(argc != 3)
     {
       cerr << "ERROR: Invalid number of arguments";
     }
@@ -72,11 +72,13 @@ int main(int argc, char* argv[])
     file += i;
   }
 
+  
 
   for (;;)
     {
       recvlen = recvfrom(sockfd, buffer, 1032, 0, 
 			 (struct sockaddr *)&remaddr, &addrlength);
+      cout << recvlen << endl;
       if (recvlen > 0)
         { 
 	  TCPmessage recPacket(0,0,0,0,0,0);
@@ -95,18 +97,6 @@ int main(int argc, char* argv[])
                 }
               else
                 {
-		  TCPmessage FIN(recPacket.getackNum(), recPacket.getSequence() + 1,
-				 recPacket.getcwnd(),0,0,1);
-		  
-		  if (sendto(sockfd, FIN.encode(),
-			     8, 0, (struct sockaddr *)&remaddr,
-			     addrlength) == -1)
-		    {
-		      perror("sendto error");
-		      return 3;
-		    }
-		  
-		  
 		  TCPmessage FIN_ACK(recPacket.getackNum(), 
 				     recPacket.getSequence() + 1,
 				     recPacket.getcwnd(),1,0,1);
@@ -142,6 +132,7 @@ int main(int argc, char* argv[])
 		    }
 		  else
 		    {
+		      cout << "1" << endl;
 		      TCPmessage initial_packet(recPacket.getackNum(),
 				       recPacket.getSequence() + 1,
 				       recPacket.getcwnd(), 0, 0, 0);
@@ -156,6 +147,18 @@ int main(int argc, char* argv[])
                           perror("sendto error");
                           return 3;
                         }
+
+		      TCPmessage FIN(recPacket.getackNum(), 
+				     recPacket.getSequence() + 1,
+				     recPacket.getcwnd(),0,0,1);
+
+		      if (sendto(sockfd, FIN.encode(),
+				 8, 0, (struct sockaddr *)&remaddr,
+				 addrlength) == -1)
+			{
+			  perror("sendto error");
+			  return 3;
+			}
 		    }
 		}
 	      else
@@ -195,7 +198,17 @@ int main(int argc, char* argv[])
                           return 3;
                         }
                     }
-
+		  
+		  TCPmessage FIN(recPacket.getackNum(), recPacket.getSequence() + 1,
+                                 recPacket.getcwnd(),0,0,1);
+		  
+                  if (sendto(sockfd, FIN.encode(),
+                             8, 0, (struct sockaddr *)&remaddr,
+                             addrlength) == -1)
+                    {
+                      perror("sendto error");
+                      return 3;
+                    }
 		}
             }
 	  else if(recPacket.getS() == 1)

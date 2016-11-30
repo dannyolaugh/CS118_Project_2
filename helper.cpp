@@ -73,13 +73,16 @@ void TCPmessage::decode(char* message)
   memcpy(&sequenceNum, message, 2);
   memcpy(&ackNum, message+2, 2);
   memcpy(&cwnd, message+4, 2);
- 
+  
   F = 0;
   S = 0;
   A = 0;
+  
 
   int tmp = 0;
   memcpy(&tmp, message+6, 2);
+  
+
   if(tmp%2 == 1)
     {
       F = 1;
@@ -92,8 +95,10 @@ void TCPmessage::decode(char* message)
     {
       A = 1;
     }
-
-  memcpy(&payload, message+8, strlen(message)-8);
+  
+  
+  if(strlen(message) > 8)
+    memcpy(&payload, message+8, strlen(message)-8);
 }
 
 

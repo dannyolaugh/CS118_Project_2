@@ -22,7 +22,7 @@ int main(int argc, char** argv)
   int recvlen;
   char buffer[1032]; 
 
-  if(argc != 2)
+  if(argc != 3)
     {
       cerr << "ERROR: Invalid number of arguments";
     }
@@ -50,7 +50,7 @@ int main(int argc, char** argv)
   // bind address to socket                                                         
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  addr.sin_port = htons(80);
+  addr.sin_port = htons(0);
   memset(addr.sin_zero, '\0', sizeof(addr.sin_zero));
 
   if (::bind(sockfd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
@@ -85,10 +85,36 @@ int main(int argc, char** argv)
       
       TCPmessage recPacket(0,0,0,0,0,0);
       recPacket.decode(buffer);
-
+      cout << recPacket.getPayload() << endl;
       if (recvlen > 0) 
 	{
-	  if(recPacket.getA() == 1)
+	  if(recPacket.getF() == 1)
+	    {
+	      TCPmessage FIN(recPacket.getackNum(), recPacket.getSequence() + 1,
+			     recPacket.getcwnd(),0,0,1);
+
+	      if (sendto(sockfd, FIN.encode(),
+			 8, 0, (struct sockaddr *)&remaddr,
+			 addrlength) == -1)
+		{
+		  perror("sendto error");
+		  return 3;
+		}
+
+
+	      TCPmessage FIN_ACK(recPacket.getackNum(),
+				 recPacket.getSequence() + 1,
+				 recPacket.getcwnd(),1,0,1);
+	      
+	      if (sendto(sockfd, FIN_ACK.encode(),8, 0,
+			 (struct sockaddr *)&remaddr, addrlength) == -1)
+		{
+		  perror("sendto error");
+		  return 3;
+		}
+	      break;
+	    }
+	  else if(recPacket.getA() == 1)
 	    {
 	      if(recPacket.getS() == 1)
 		{
@@ -102,20 +128,6 @@ int main(int argc, char** argv)
 		      perror("sendto error");
 		      return 3;
 		    }
-		}
-	      else if(recPacket.getF() == 1)
-		{
-		  TCPmessage FIN_ACK(recPacket.getackNum(),
-				     recPacket.getSequence() + 1,
-                                     recPacket.getcwnd(),1,0,1);
-		  
-		  if (sendto(sockfd, FIN_ACK.encode(),8, 0,
-			     (struct sockaddr *)&remaddr, addrlength) == -1)
-		    {
-		      perror("sendto error");
-		      return 3;
-		    }
-		  break;
 		}
 	      else
 		{
@@ -141,6 +153,8 @@ int main(int argc, char** argv)
 		  perror("sendto error");
 		  return 3;
 		}
+	      
+	      
 	    }
 	  else
 	    {
@@ -159,6 +173,7 @@ int main(int argc, char** argv)
 	}
     }
   
+  cout << file << endl;
   ofstream outf;
   outf.open("requested_data.txt");
   if (outf.is_open()) {
