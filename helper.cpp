@@ -23,6 +23,7 @@ TCPmessage::TCPmessage(int sNum, int aNum, int c, int aFlag, int sFlag, int fFla
   S = sFlag;
   F = fFlag;
   payload = "";
+  payloadSize = 0;
 }
 
 int TCPmessage::getSequence()
@@ -47,15 +48,17 @@ string TCPmessage::getPayload()
 {return payload;}
 
 void TCPmessage::setPayload(string p)
-{
-  payload = p;
-}
+{payload = p;}
+
+void TCPmessage::setPayloadSize(int s)
+{payloadSize = s;}
+
+int TCPmessage::getPayloadSize()
+{return payloadSize;}
 
 char* TCPmessage::encode()
 {
   char* e = new char[1032];
-  
-  //  const int s = sequenceNum;
 
   memcpy(e, &sequenceNum, 2);
   memcpy(e+2, &ackNum, 2);
@@ -63,8 +66,8 @@ char* TCPmessage::encode()
 
   int flags = 1*F + 2*S + 4*A;
   memcpy(e+6, &flags, 2);
-  
   memcpy(e+8, payload.c_str(), payload.length());  
+  
   return e;
 }
 
@@ -96,9 +99,10 @@ void TCPmessage::decode(char* message)
       A = 1;
     }
   
-  
-  if(strlen(message) > 8)
-    memcpy(&payload, message+8, strlen(message)-8);
+  char* tmpString = new char[1024];
+  memcpy(tmpString, message+8, payloadSize);
+
+  payload = tmpString;
 }
 
 

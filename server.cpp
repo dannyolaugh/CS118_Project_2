@@ -55,6 +55,7 @@ int main(int argc, char* argv[])
     return 2;
   }
 
+  int x = 0;
   string file;
   unsigned char i;  
   ifstream myReadFile;
@@ -64,27 +65,26 @@ int main(int argc, char* argv[])
       perror("open");
       return 4;
     }
-  //read file if found                                                          
-  while(1) {
-    myReadFile.read((char *)&i, sizeof(i));
-    if(myReadFile.eof())
-      break;
-    file += i;
-  }
-
   
-
+  int lastAckNum = -1;
   for (;;)
     {
       recvlen = recvfrom(sockfd, buffer, 1032, 0, 
 			 (struct sockaddr *)&remaddr, &addrlength);
-      cout << recvlen << endl;
       if (recvlen > 0)
         { 
 	  TCPmessage recPacket(0,0,0,0,0,0);
 	  recPacket.decode(buffer);
 
-	  if(recPacket.getF() == 1)
+	  int nextAck = 0;
+	  if(recPacket.getSequence() != 30720)
+	    nextAck = recPacket.getSequence() + 1;
+	  
+	  if(recPacket.getackNum() == lastAckNum)
+	    {
+	      lastAckNum = -1;
+	    }
+	  else if(recPacket.getF() == 1)
 	    {
 	      if(recPacket.getS() == 1)
 		{
@@ -93,12 +93,12 @@ int main(int argc, char* argv[])
 		}
               if(recPacket.getA() == 1)
 		{
-		  cout << "server closed" << endl;
+		  cout << "fin ack received" << endl;
                 }
               else
                 {
-		  TCPmessage FIN_ACK(recPacket.getackNum(), 
-				     recPacket.getSequence() + 1,
+		  cout << "fin received" << endl;
+		  TCPmessage FIN_ACK(recPacket.getackNum(), nextAck,
 				     recPacket.getcwnd(),1,0,1);
 		  
 		  if (sendto(sockfd, FIN_ACK.encode(),
@@ -112,15 +112,26 @@ int main(int argc, char* argv[])
             }
 	  else if(recPacket.getA() == 1)
 	    {
+	      file = "";
+	      x = 0;
+	      while(x < 1024) {
+		myReadFile.read((char *)&i, sizeof(i));
+		if(myReadFile.eof())
+		  break;
+		file += i;
+		x++;
+	      }
+	      
               if(recPacket.getS() == 1)
 		{
-		  if(file.size() > 1024)
+		  if(file.size() == 1024)
 		    {
-		      TCPmessage initial_packet(recPacket.getackNum(),
-						recPacket.getSequence() + 1,
+		      cout << "syn ack full received" <<endl;
+		      TCPmessage initial_packet(recPacket.getackNum(), nextAck,
 						recPacket.getcwnd(), 0, 0, 0);
 		      
-		      initial_packet.setPayload(file.substr(0,1024));
+		      initial_packet.setPayload(file);
+		      initial_packet.setPayloadSize(1024);
 		      
 		      if (sendto(sockfd, initial_packet.encode(), 
 				 1032, 0, (struct sockaddr *)&remaddr,
@@ -132,12 +143,12 @@ int main(int argc, char* argv[])
 		    }
 		  else
 		    {
-		      cout << "1" << endl;
-		      TCPmessage initial_packet(recPacket.getackNum(),
-				       recPacket.getSequence() + 1,
-				       recPacket.getcwnd(), 0, 0, 0);
-		      
-		      initial_packet.setPayload(file.substr(0,file.size()));
+		      cout << "syn ack only received" <<endl;
+		      TCPmessage initial_packet(recPacket.getackNum(), nextAck,
+						recPacket.getcwnd(), 0, 0, 0);
+
+		      initial_packet.setPayload(file);
+		      initial_packet.setPayloadSize(file.size());
 
                       if (sendto(sockfd, initial_packet.encode(),
                                  8 + file.size(),
@@ -148,8 +159,7 @@ int main(int argc, char* argv[])
                           return 3;
                         }
 
-		      TCPmessage FIN(recPacket.getackNum(), 
-				     recPacket.getSequence() + 1,
+		      TCPmessage FIN(recPacket.getackNum(), nextAck,
 				     recPacket.getcwnd(),0,0,1);
 
 		      if (sendto(sockfd, FIN.encode(),
@@ -159,17 +169,23 @@ int main(int argc, char* argv[])
 			  perror("sendto error");
 			  return 3;
 			}
+		      
+		      lastAckNum = recPacket.getackNum() + file.size();
+		      if(recPacket.getackNum() + file.size() > 30720)
+			lastAckNum -= 30720;
 		    }
 		}
 	      else
 		{
-		  if(file.size() > 1024 + recPacket.getackNum())
+		  cout << "ack received" <<endl;
+		  cout << recPacket.getackNum() << endl;
+		  if(file.size() == 1024)
                     {
-		      TCPmessage packet(recPacket.getackNum(),
-				       1 + recPacket.getackNum(),
-				       recPacket.getcwnd(), 0, 0, 0);
+		      TCPmessage packet(recPacket.getackNum(), nextAck,
+					recPacket.getcwnd(), 0, 0, 0);
 		      
-                      packet.setPayload(file.substr(recPacket.getackNum(),1024));
+                      packet.setPayload(file);
+		      packet.setPayloadSize(1024);
 
                       if (sendto(sockfd, packet.encode(),
                                  1032, 0, (struct sockaddr *)&remaddr,
@@ -181,39 +197,45 @@ int main(int argc, char* argv[])
                     }
                   else
                     {
-		      TCPmessage packet(recPacket.getackNum(),
-				       1 + recPacket.getackNum(),
-				       recPacket.getcwnd(), 0, 0, 0);
+		      cout << "ack only received" <<endl;
+		      TCPmessage packet(recPacket.getackNum(), nextAck,
+					recPacket.getcwnd(), 0, 0, 0);
+		      
+		      packet.setPayload(file);
+		      packet.setPayloadSize(file.size());
 
-		      packet.setPayload(file.substr(recPacket.getackNum(),
-							    file.size() -
-							    recPacket.getackNum()));
-
+		      
                       if (sendto(sockfd, packet.encode(),
-                                 file.size() - recPacket.getackNum(),
+                                 8 + file.size(),
                                  0, (struct sockaddr *)&remaddr,
                                  addrlength) == -1)
                         {
                           perror("sendto error");
                           return 3;
                         }
-                    }
+                    
+		      
+		      TCPmessage FIN(recPacket.getackNum(), nextAck,
+				     recPacket.getcwnd(),0,0,1);
 		  
-		  TCPmessage FIN(recPacket.getackNum(), recPacket.getSequence() + 1,
-                                 recPacket.getcwnd(),0,0,1);
-		  
-                  if (sendto(sockfd, FIN.encode(),
-                             8, 0, (struct sockaddr *)&remaddr,
-                             addrlength) == -1)
-                    {
-                      perror("sendto error");
-                      return 3;
-                    }
+		      if (sendto(sockfd, FIN.encode(),
+				 8, 0, (struct sockaddr *)&remaddr,
+				 addrlength) == -1)
+			{
+			  perror("sendto error");
+			  return 3;
+			}
+		      
+		      lastAckNum = recPacket.getackNum() + file.size();
+                      if(recPacket.getackNum() + file.size() > 30720)
+                        lastAckNum -= 30720;
+		    }
 		}
             }
 	  else if(recPacket.getS() == 1)
 	    {
-	      TCPmessage SYN_ACK(recPacket.getackNum(), recPacket.getSequence() + 1,
+	      cout << "syn received" <<endl;
+	      TCPmessage SYN_ACK(recPacket.getackNum(), nextAck,
 				 recPacket.getcwnd(), 1, 1, 0);
 	      
 	      if (sendto(sockfd, SYN_ACK.encode(), 8, 0, 

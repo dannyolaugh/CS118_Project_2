@@ -20,6 +20,8 @@ class TCPmessage
   int getA();
   string getPayload();
   void setPayload(string p);
+  void setPayloadSize(int s);
+  int getPayloadSize();
 
   char* encode();
   void decode(char* message);
@@ -31,6 +33,7 @@ class TCPmessage
   int A;
   int S;
   int F;
+  int payloadSize;
   string payload;
 };
 

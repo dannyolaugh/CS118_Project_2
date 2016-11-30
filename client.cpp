@@ -74,7 +74,7 @@ int main(int argc, char** argv)
       perror("sendto error");
       return 3;
     }
-
+  cout << "syn sent" <<endl;
   string file = ""; 
 
   /* now loop, receiving data and printing what we received */
@@ -84,13 +84,19 @@ int main(int argc, char** argv)
 			 (struct sockaddr *)&remaddr, &addrlength);
       
       TCPmessage recPacket(0,0,0,0,0,0);
+      recPacket.setPayloadSize(recvlen-8);
       recPacket.decode(buffer);
-      cout << recPacket.getPayload() << endl;
+      
       if (recvlen > 0) 
 	{
-	  if(recPacket.getF() == 1)
+	  if(recPacket.getF() == 1 && recPacket.getA() == 0)
 	    {
-	      TCPmessage FIN(recPacket.getackNum(), recPacket.getSequence() + 1,
+	      int nextAck = 0;
+	      if(recPacket.getSequence() != 30720)
+		nextAck = recPacket.getSequence() + 1;
+	      
+	      cout << "fin received" <<endl;
+	      TCPmessage FIN(recPacket.getackNum(), nextAck,
 			     recPacket.getcwnd(),0,0,1);
 
 	      if (sendto(sockfd, FIN.encode(),
@@ -102,8 +108,7 @@ int main(int argc, char** argv)
 		}
 
 
-	      TCPmessage FIN_ACK(recPacket.getackNum(),
-				 recPacket.getSequence() + 1,
+	      TCPmessage FIN_ACK(recPacket.getackNum(), nextAck,
 				 recPacket.getcwnd(),1,0,1);
 	      
 	      if (sendto(sockfd, FIN_ACK.encode(),8, 0,
@@ -118,8 +123,12 @@ int main(int argc, char** argv)
 	    {
 	      if(recPacket.getS() == 1)
 		{
-		  TCPmessage SYN_ACK(recPacket.getackNum(), 
-				     recPacket.getSequence() + 1, 
+		  int nextAck = 0;
+		  if(recPacket.getSequence() != 30720)
+		    nextAck= recPacket.getSequence() + 1;
+
+		  cout << "syn ack received" <<endl;
+		  TCPmessage SYN_ACK(recPacket.getackNum(), nextAck, 
 				     recPacket.getcwnd(), 1, 1, 0);
 		  
 		  if (sendto(sockfd, SYN_ACK.encode(), 8, 0,
@@ -139,22 +148,23 @@ int main(int argc, char** argv)
 		  recPacket.getF() == 0 && 
 		  recPacket.getS() == 0)
 	    {
+	      cout << "data received" <<endl;
 	      file += recPacket.getPayload();
 
-	      TCPmessage ACK(recPacket.getackNum(),
-			     recPacket.getSequence() +
-			     recPacket.getPayload().size(),
-			     recPacket.getcwnd(),1,0,0);
+	      int nextAck = recPacket.getSequence() + recPacket.getPayloadSize();
+	      if(recPacket.getSequence()+ recPacket.getPayloadSize() > 30720)
+		nextAck -= 30720;
 
+	      TCPmessage ACK(recPacket.getackNum(), nextAck,
+			     recPacket.getcwnd(),1,0,0);
+	      
 	      if (sendto(sockfd, ACK.encode(),
-			 1032, 0, (struct sockaddr *)&remaddr,
+			 8, 0, (struct sockaddr *)&remaddr,
 			 addrlength) == -1)
 		{
 		  perror("sendto error");
 		  return 3;
-		}
-	      
-	      
+		}	      
 	    }
 	  else
 	    {
@@ -172,8 +182,7 @@ int main(int argc, char** argv)
 	  exit(1);
 	}
     }
-  
-  cout << file << endl;
+
   ofstream outf;
   outf.open("requested_data.txt");
   if (outf.is_open()) {
