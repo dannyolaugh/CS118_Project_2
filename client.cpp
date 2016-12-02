@@ -82,11 +82,12 @@ int main(int argc, char** argv)
     {
       recvlen = recvfrom(sockfd, buffer, 1032, 0, 
 			 (struct sockaddr *)&remaddr, &addrlength);
-      
+      cout <<recvlen<< endl;
       TCPmessage recPacket(0,0,0,0,0,0);
       recPacket.setPayloadSize(recvlen-8);
+      cout << recPacket.getPayloadSize() << endl;
       recPacket.decode(buffer);
-      
+
       if (recvlen > 0) 
 	{
 	  if(recPacket.getF() == 1 && recPacket.getA() == 0)
@@ -151,6 +152,7 @@ int main(int argc, char** argv)
 	      cout << "data received" <<endl;
 	      file += recPacket.getPayload();
 
+	      cout << recPacket.getPayload().size() << endl;
 	      int nextAck = recPacket.getSequence() + recPacket.getPayloadSize();
 	      if(recPacket.getSequence()+ recPacket.getPayloadSize() > 30720)
 		nextAck -= 30720;

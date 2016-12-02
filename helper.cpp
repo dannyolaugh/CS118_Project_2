@@ -18,7 +18,7 @@ TCPmessage::TCPmessage(int sNum, int aNum, int c, int aFlag, int sFlag, int fFla
 {
   sequenceNum = sNum;
   ackNum = aNum;
-  cwnd = c;
+  cwnd = 1024;
   A = aFlag;
   S = sFlag;
   F = fFlag;
@@ -101,14 +101,15 @@ void TCPmessage::decode(char* message)
   
   char* tmpString = new char[1024];
   memcpy(tmpString, message+8, payloadSize);
-
-  payload = tmpString;
+  string extra = tmpString;
+  payload = extra.substr(0, payloadSize);  
 }
 
 
 bool isIP(string x)
 {
-  for(int i = 0; i < x.length(); i ++)
+  int l = x.length();
+  for(int i = 0; i < l; i ++)
     {
       if(x[i] !=  '.' || !isdigit(x[i]))
 	return false;
