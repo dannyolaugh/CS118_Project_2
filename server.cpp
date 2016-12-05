@@ -141,17 +141,20 @@ int main(int argc, char* argv[])
 	  if(lastAck > recPacket.getackNum())
 	    continue;
 
+	  if(lastAck == recPacket.getackNum() && recPacket.getS())
+	    continue;
+
 	  if(secondTime && recPacket.getackNum() == lastAck){
 	    retransmit= true;
-	    continue;
+
 	  }
 	  if(firstTime && recPacket.getackNum() == lastAck){
             secondTime = true;
-	    continue;
+
 	  }
 	  if(recPacket.getackNum() == lastAck){
 	    firstTime = true;
-	    continue;
+
 	  }
 	    
 
@@ -262,6 +265,7 @@ int main(int argc, char* argv[])
 		    savedPackets.erase(it);
 		    break;
 		  }
+
 	      }
 
 	      lastAck = recPacket.getackNum();
@@ -279,6 +283,11 @@ int main(int argc, char* argv[])
 		      file += i;
 		      x++;
 		    }
+		  if(file.size() == 0)
+		    {
+		      numPacketsOut--;
+		    break;
+		}
 
 		  if(file.size() == 1024)
 		    {

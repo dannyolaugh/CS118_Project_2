@@ -28,6 +28,7 @@ class TCPmessage
 
   char* encode();
   void decode(char* message);
+  int index = -1;
 
  private:
   int sequenceNum;
