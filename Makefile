@@ -15,13 +15,13 @@ all: server client
 	$(CXX) -o $@ $^ $(CXXFLAGS) $@.cpp
 
 server: $(SERVER_FILES:.cpp=.o)
-	$(CXX) -o $@ $(CXXFLAGS) $(SERVER_FILES:.cpp=.o)
+	$(CXX) -o simple-tcp-server $(CXXFLAGS) $(SERVER_FILES:.cpp=.o)
 
 client: $(CLIENT_FILES:.cpp=.o)
-	$(CXX) -o $@ $(CXXFLAGS) $(CLIENT_FILES:.cpp=.o)
+	$(CXX) -o simple-tcp-client $(CXXFLAGS) $(CLIENT_FILES:.cpp=.o)
 
 clean:
-	rm -rf *.o *~ *.gch *.swp *.dSYM server client *.tar.gz
+	rm -rf *.o *~ *.gch *.swp *.dSYM simple-tcp-server simple-tcp-client *.tar.gz
 
 tarball: clean
 	tar -cvf $(USERID).tar.gz *

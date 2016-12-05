@@ -18,7 +18,7 @@ TCPmessage::TCPmessage(int sNum, int aNum, int c, int aFlag, int sFlag, int fFla
 {
   sequenceNum = sNum;
   ackNum = aNum;
-  cwnd = 1024;
+  cwnd = c;
   A = aFlag;
   S = sFlag;
   F = fFlag;
@@ -28,6 +28,9 @@ TCPmessage::TCPmessage(int sNum, int aNum, int c, int aFlag, int sFlag, int fFla
 
 int TCPmessage::getSequence()
 {return sequenceNum;}
+
+void TCPmessage::setSequence(int s)
+{sequenceNum=s;}
 
 int TCPmessage::getackNum()
 {return ackNum;}
@@ -55,6 +58,13 @@ void TCPmessage::setPayloadSize(int s)
 
 int TCPmessage::getPayloadSize()
 {return payloadSize;}
+
+timeval TCPmessage::getTimeSet()
+{return sentTime;}
+
+void TCPmessage::setTimer()
+{gettimeofday(&sentTime, NULL);}
+
 
 char* TCPmessage::encode()
 {

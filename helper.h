@@ -2,7 +2,7 @@
 #define HELPER_H
 
 #include <string>
-
+#include <sys/time.h>
 using namespace std;
 
 bool isIP(string x);
@@ -13,6 +13,7 @@ class TCPmessage
  public:
   TCPmessage(int sNum, int aNum, int c, int aFlag, int sFlag, int fFlag);
   int getSequence();
+  void setSequence(int s);
   int getackNum();
   int getcwnd();
   int getS();
@@ -22,6 +23,8 @@ class TCPmessage
   void setPayload(string p);
   void setPayloadSize(int s);
   int getPayloadSize();
+  timeval getTimeSet();
+  void setTimer();
 
   char* encode();
   void decode(char* message);
@@ -35,6 +38,7 @@ class TCPmessage
   int F;
   int payloadSize;
   string payload;
+  timeval sentTime;
 };
 
 #endif
