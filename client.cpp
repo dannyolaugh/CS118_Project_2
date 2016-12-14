@@ -96,10 +96,12 @@ int main(int argc, char** argv)
 	  if(lastAck > recPacket.getSequence())
 	    continue;
 
-
-	  cout << "Receiving packet " << recPacket.getSequence()
-	    + recPacket.getPayloadSize() << endl;
-
+	  if(recPacket.getSequence() + recPacket.getPayloadSize() < 30720)
+	    cout << "Receiving packet " << recPacket.getSequence()
+	      + recPacket.getPayloadSize() << endl;
+	  else
+	    cout << "Receiving packet " << recPacket.getSequence()
+              + recPacket.getPayloadSize()-30720 << endl;
 	  if(recPacket.getF() == 1 && recPacket.getA() == 0)
 	    {
 	      vector<TCPmessage>::iterator it = savedPackets.begin();
@@ -206,7 +208,8 @@ int main(int argc, char** argv)
 	      else
 	      	tmp = true;
 	      
-	      if(recPacket.getSequence()+ recPacket.getPayloadSize() > 30720)
+	      if(recPacket.getSequence()+ recPacket.getPayloadSize() > 30720
+		 && (nextAck - 30720) >= 0)
 		nextAck -= 30720;
 	      
 	      if(tmp)
@@ -286,6 +289,8 @@ int main(int argc, char** argv)
 
   
   bool swapped = true;
+  if(rec.size() > 29)
+    swapped = false;
   while (swapped) 
     {
       swapped = false;

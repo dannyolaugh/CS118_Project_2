@@ -79,6 +79,7 @@ int main(int argc, char* argv[])
   bool secondTime = false;
   bool finished = false;
   timeval f;
+  int nextAck = 0;
   for (;;)
     {
       recvlen = recvfrom(sockfd, buffer, 1032, 0, 
@@ -112,7 +113,7 @@ int main(int argc, char* argv[])
 	      continue;
 	    }
 	}
-      
+
       if(done == true && numPacketsOut == 0)
 	{
 	  TCPmessage FIN(lastAck, lastSequence, cwnd, 0, 0, 1);
@@ -137,12 +138,6 @@ int main(int argc, char* argv[])
         { 
 	  TCPmessage recPacket(0,0,0,0,0,0);
 	  recPacket.decode(buffer);
-	  
-	  if(lastAck > recPacket.getackNum())
-	    continue;
-
-	  if(lastAck == recPacket.getackNum() && recPacket.getS())
-	    continue;
 
 	  if(secondTime && recPacket.getackNum() == lastAck){
 	    retransmit= true;
@@ -154,16 +149,10 @@ int main(int argc, char* argv[])
 	  }
 	  if(recPacket.getackNum() == lastAck){
 	    firstTime = true;
-
 	  }
 	    
 
-	  if(cwnd > ssthresh)
-            cwnd+=1024;
-          else
-            cwnd *= 2;
-
-
+	  
 	  if(retransmit)
             {
               ssthresh = cwnd/2;
@@ -249,6 +238,7 @@ int main(int argc, char* argv[])
 	    {
 	      numPacketsOut--;
 	      cout<< "Receiving packet " << recPacket.getackNum() << endl;
+
 	      vector<TCPmessage>::iterator it = savedPackets.begin();
 	      for(; it != savedPackets.end(); ++it) {
 		if((it->getSequence()) == recPacket.getackNum() - 1024){
@@ -260,17 +250,30 @@ int main(int argc, char* argv[])
 		    savedPackets.erase(it);
 		    break;
 		  }
-		if(it->getSequence() < recPacket.getackNum())
+		if(it->getSequence() < recPacket.getackNum() && done
+		   &&it->getSequence() - recPacket.getackNum() < 1024)
 		  {
 		    savedPackets.erase(it);
 		    break;
 		  }
-
+		if((it->getSequence() - 30720) == (recPacket.getackNum() - 1024))
+		  {
+		    savedPackets.erase(it);
+		    break;
+		  }
 	      }
 
 	      lastAck = recPacket.getackNum();
+
 	      for(int n = numPacketsOut; n < cwnd/1024; n++)
 		{
+		  nextAck = recPacket.getackNum() + (numPacketsOut*1024);
+		  if(nextAck > 30720)
+		    {
+		      nextAck -= 30720;
+		    }
+		  lastAck = nextAck;
+
 		  if(done == true)
 		    break;
 		  file = "";
@@ -286,16 +289,14 @@ int main(int argc, char* argv[])
 		  if(file.size() == 0)
 		    {
 		      numPacketsOut--;
-		    break;
-		}
+		      break;
+		    }
 
 		  if(file.size() == 1024)
 		    {
-		      TCPmessage packet(recPacket.getackNum() 
-					+ (numPacketsOut)*1024,
+		      TCPmessage packet(nextAck,
 					recPacket.getSequence(), cwnd,0,0,0);
-		      lastAck = recPacket.getackNum() + numPacketsOut*1024;
-		      
+		      		      
 		      packet.setPayload(file);
 		      packet.setPayloadSize(1024);
 		      
@@ -314,12 +315,10 @@ int main(int argc, char* argv[])
 		    }
 		  else
 		    {
-		      TCPmessage packet(recPacket.getackNum() 
-					+ (numPacketsOut)* 1024,
+		      TCPmessage packet(nextAck,
 					recPacket.getSequence(),cwnd,0,0,0);
 		      lastSequence = recPacket.getSequence();
-		      lastAck = recPacket.getackNum() + numPacketsOut*1024;
-
+		      
 		      packet.setPayload(file);
 		      packet.setPayloadSize(file.size());
 		      
@@ -366,7 +365,15 @@ int main(int argc, char* argv[])
 	      perror("No flags set");
 	      return 7;
 	    }
-	}
+	 if(cwnd> 28762)
+	   continue;
+
+	 if(cwnd > ssthresh)
+	   cwnd+=1024;
+	 else
+	   cwnd *= 2;
+
+	   }
       else if (recvlen == 0)
 	{
 
