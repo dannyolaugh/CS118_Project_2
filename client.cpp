@@ -241,7 +241,7 @@ int main(int argc, char** argv)
 	}
       else
 	{
-
+		//nothing
 	}
       bool timeout = false;
       timeval timestamp;
@@ -311,7 +311,6 @@ int main(int argc, char** argv)
     }
 
   string file = "";
-
 
   vector<TCPmessage>::iterator it = rec.begin();
   for(; it < rec.end(); it++)
