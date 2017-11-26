@@ -44,7 +44,6 @@ int main(int argc, char* argv[])
   setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,(const char *)&tv,
 	     sizeof(struct timeval));
 
-
    // bind address to socket
   addr.sin_family = AF_INET;
   addr.sin_port = htons(atoi(port_num.c_str()));     // short, network byte order
@@ -151,7 +150,6 @@ int main(int argc, char* argv[])
 	    firstTime = true;
 	  }
 	    
-
 	  
 	  if(retransmit)
             {
@@ -369,7 +367,7 @@ int main(int argc, char* argv[])
 	   continue;
 
 	 if(cwnd > ssthresh)
-	   cwnd+=1024;
+	   cwnd+=1024;  //increment cwnd
 	 else
 	   cwnd *= 2;
 
