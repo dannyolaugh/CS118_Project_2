@@ -95,7 +95,6 @@ void TCPmessage::decode(char* message)
   int tmp = 0;
   memcpy(&tmp, message+6, 2);
   
-
   if(tmp%2 == 1)
     {
       F = 1;
@@ -139,7 +138,7 @@ string getIP(string hostname, string portNum)
   hints.ai_family = AF_INET; // IPv4                                        
   hints.ai_socktype = SOCK_STREAM; // TCP                                   
 
-  // get address                                                            
+  // get the address                                                            
   int status = 0;
   if ((status = getaddrinfo(hostname.c_str(), portNum.c_str(), &hints, &res)) != 0) {
     std::cerr << "getaddrinfo: " << gai_strerror(status) << std::endl;
